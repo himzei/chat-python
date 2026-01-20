@@ -4,8 +4,12 @@ from deep_translator import GoogleTranslator
 input_file_path = "input_en.txt"
 output_file_path = "output_kr.txt"
 
-# Google 번역기 초기화 (영어 -> 한국어)
-translator = GoogleTranslator(source="en", target="ko")
+# 번역할 목표 언어 설정 (한국어: 'ko', 영어: 'en', 일본어: 'ja')
+target_language = "ko"  # 한국어로 번역
+
+# Google 번역기 초기화 (자동 언어 감지 -> 목표 언어)
+# 'auto'를 사용하면 소스 언어를 자동으로 감지합니다 (한국어, 영어, 일본어 모두 지원)
+translator = GoogleTranslator(source="auto", target=target_language)
 
 try:
     # 입력 파일 읽기
