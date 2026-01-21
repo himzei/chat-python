@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>날씨 정보 앱</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌤️ 날씨 정보</h1>
+            <p class="subtitle">현재 위치의 실시간 날씨를 확인하세요</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>위치 정보를 가져오는 중...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            <p id="error-message"></p>
+            <button onclick="getWeather()" class="retry-btn">다시 시도</button>
+        </div>
+
+        <div id="weather-content" style="display: none;">
+            <!-- 위치 정보 -->
+            <div class="location-box">
+                <h2 id="location">-</h2>
+                <p id="current-time">-</p>
+            </div>
+
+            <!-- 메인 날씨 정보 -->
+            <div class="main-weather">
+                <div class="weather-icon-box">
+                    <img id="weather-icon" src="" alt="날씨 아이콘">
+                </div>
+                <div class="temp-box">
+                    <h1 id="temperature">-</h1>
+                    <p id="description">-</p>
+                </div>
+            </div>
+
+            <!-- 상세 정보 그리드 -->
+            <div class="details-grid">
+                <div class="detail-card">
+                    <div class="detail-icon">🌡️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">체감 온도</p>
+                        <p class="detail-value" id="feels-like">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">💧</div>
+                    <div class="detail-info">
+                        <p class="detail-label">습도</p>
+                        <p class="detail-value" id="humidity">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">💨</div>
+                    <div class="detail-info">
+                        <p class="detail-label">풍속</p>
+                        <p class="detail-value" id="wind-speed">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">☁️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">구름량</p>
+                        <p class="detail-value" id="clouds">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">🌧️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">강수량 (1시간)</p>
+                        <p class="detail-value" id="rain">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">👁️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">가시거리</p>
+                        <p class="detail-value" id="visibility">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">🌡️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">최저 / 최고</p>
+                        <p class="detail-value" id="temp-range">-</p>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-icon">🎚️</div>
+                    <div class="detail-info">
+                        <p class="detail-label">기압</p>
+                        <p class="detail-value" id="pressure">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 새로고침 버튼 -->
+            <button onclick="getWeather()" class="refresh-btn">🔄 새로고침</button>
+        </div>
+    </div>
+
+    <script>
+        // 페이지 로드 시 자동으로 날씨 정보 가져오기
+        window.addEventListener('load', getWeather);
+
+        function getWeather() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const content = document.getElementById('weather-content');
+
+            // UI 초기화
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            content.style.display = 'none';
+
+            // 브라우저의 Geolocation API로 현재 위치 가져오기
+            if (!navigator.geolocation) {
+                showError('브라우저가 위치 정보를 지원하지 않습니다.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                // 성공 시
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    fetchWeatherData(lat, lon);
+                },
+                // 실패 시
+                (err) => {
+                    showError('위치 정보를 가져올 수 없습니다. 위치 권한을 허용해주세요.');
+                }
+            );
+        }
+
+        function fetchWeatherData(lat, lon) {
+            // 서버의 날씨 API 호출
+            fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('날씨 정보를 가져올 수 없습니다.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    displayWeather(data);
+                })
+                .catch(err => {
+                    showError(err.message);
+                });
+        }
+
+        function displayWeather(data) {
+            // 현재 시간 표시
+            const now = new Date();
+            const timeString = now.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // 데이터 표시
+            document.getElementById('location').textContent = data.location;
+            document.getElementById('current-time').textContent = timeString;
+            document.getElementById('weather-icon').src = `https://openweathermap.org/img/wn/${data.icon}@4x.png`;
+            document.getElementById('temperature').textContent = `${data.temp}°C`;
+            document.getElementById('description').textContent = data.description;
+            document.getElementById('feels-like').textContent = `${data.feels_like}°C`;
+            document.getElementById('humidity').textContent = `${data.humidity}%`;
+            document.getElementById('wind-speed').textContent = `${data.wind_speed} m/s`;
+            document.getElementById('clouds').textContent = `${data.clouds}%`;
+            document.getElementById('rain').textContent = data.rain > 0 ? `${data.rain} mm` : '없음';
+            document.getElementById('visibility').textContent = `${data.visibility} km`;
+            document.getElementById('temp-range').textContent = `${data.temp_min}°C / ${data.temp_max}°C`;
+            document.getElementById('pressure').textContent = `${data.pressure} hPa`;
+
+            // UI 표시
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('weather-content').style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
