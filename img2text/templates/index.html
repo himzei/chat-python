@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지/PDF 텍스트 추출기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            color: #667eea;
+            font-weight: 600;
+            display: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-excel {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .btn-excel:hover {
+            box-shadow: 0 10px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error {
+            background: #fee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        .alert-warning {
+            background: #fff4e5;
+            border-left: 4px solid #ff9800;
+            color: #e65100;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1565c0;
+        }
+
+        .supported-formats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .supported-formats h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .format-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .format-tag {
+            background: white;
+            color: #667eea;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid #667eea;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 이미지/PDF 텍스트 추출기</h1>
+        <p class="subtitle">이미지나 PDF 파일에서 텍스트를 추출하여 다운로드하세요</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {% if category == 'error' %}
+                            ❌
+                        {% elif category == 'warning' %}
+                            ⚠️
+                        {% else %}
+                            ℹ️
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">파일을 드래그하거나 클릭하여 선택</div>
+                <div class="upload-hint">이미지 또는 PDF 파일을 업로드하세요 (최대 16MB)</div>
+                <input type="file" id="file-input" name="file" accept=".png,.jpg,.jpeg,.gif,.bmp,.tiff,.pdf" required>
+                <div class="file-name" id="file-name"></div>
+            </div>
+
+            <button type="submit" class="btn" id="submit-btn" disabled>텍스트 추출하기</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #667eea;">처리 중입니다...</p>
+            </div>
+        </form>
+
+        <form id="excel-form" action="/convert-to-excel" method="post" enctype="multipart/form-data" style="margin-top: 20px;">
+            <input type="file" id="excel-file-input" name="file" accept=".pdf" style="display: none;">
+            <button type="submit" class="btn btn-excel" id="excel-btn" disabled style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                📊 PDF를 엑셀로 변환하기
+            </button>
+            <div class="loading" id="excel-loading" style="display: none;">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #11998e;">엑셀 변환 중입니다...</p>
+            </div>
+        </form>
+
+        <div class="supported-formats">
+            <h3>지원하는 파일 형식</h3>
+            <div class="format-tags">
+                <span class="format-tag">PNG</span>
+                <span class="format-tag">JPG</span>
+                <span class="format-tag">JPEG</span>
+                <span class="format-tag">GIF</span>
+                <span class="format-tag">BMP</span>
+                <span class="format-tag">TIFF</span>
+                <span class="format-tag">PDF</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const submitBtn = document.getElementById('submit-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const loading = document.getElementById('loading');
+
+        // 업로드 영역 클릭 시 파일 선택창 열기
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 파일 선택 시 처리
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                displayFileName(file);
+            }
+        });
+
+        // 드래그 앤 드롭 처리
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                fileInput.files = e.dataTransfer.files;
+                displayFileName(file);
+            }
+        });
+
+        // 파일명 표시 함수
+        function displayFileName(file) {
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            fileName.textContent = `📎 ${file.name} (${fileSize} MB)`;
+            fileName.style.display = 'block';
+            submitBtn.disabled = false;
+        }
+
+        // 폼 제출 시 로딩 표시
+        uploadForm.addEventListener('submit', () => {
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+            submitBtn.textContent = '처리 중...';
+        });
+
+        // 엑셀 변환 관련 요소
+        const excelForm = document.getElementById('excel-form');
+        const excelFileInput = document.getElementById('excel-file-input');
+        const excelBtn = document.getElementById('excel-btn');
+        const excelLoading = document.getElementById('excel-loading');
+
+        // 파일 선택 시 엑셀 버튼 활성화
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension === 'pdf') {
+                    excelBtn.disabled = false;
+                    excelFileInput.files = e.target.files;
+                } else {
+                    excelBtn.disabled = true;
+                }
+            }
+        });
+
+        // 드래그 앤 드롭 시에도 엑셀 버튼 상태 업데이트
+        uploadArea.addEventListener('drop', (e) => {
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (fileExtension === 'pdf') {
+                    excelBtn.disabled = false;
+                    excelFileInput.files = e.dataTransfer.files;
+                } else {
+                    excelBtn.disabled = true;
+                }
+            }
+        });
+
+        // 엑셀 변환 폼 제출 시 로딩 표시
+        excelForm.addEventListener('submit', (e) => {
+            if (!excelFileInput.files || excelFileInput.files.length === 0) {
+                e.preventDefault();
+                alert('PDF 파일을 선택해주세요.');
+                return;
+            }
+            excelLoading.style.display = 'block';
+            excelBtn.disabled = true;
+            excelBtn.textContent = '변환 중...';
+        });
+    </script>
+</body>
+</html>
