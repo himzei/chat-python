@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>워드클라우드 생성기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 20px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result.success {
+            background: #e8f5e9;
+        }
+        
+        .result.error {
+            background: #ffebee;
+        }
+        
+        .result-message {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #45a049;
+        }
+        
+        .error-message {
+            color: #d32f2f;
+            font-weight: bold;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        
+        .tab-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .url-input-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 20px;
+        }
+        
+        .url-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-top: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .url-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .url-input::placeholder {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 워드클라우드 생성기</h1>
+        <p class="subtitle">텍스트 파일 업로드 또는 웹사이트 URL로 워드클라우드를 생성하세요</p>
+        
+        <!-- 탭 메뉴 -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="file">📁 파일 업로드</button>
+            <button class="tab-btn" data-tab="url">🌐 URL 크롤링</button>
+        </div>
+        
+        <!-- 파일 업로드 섹션 -->
+        <div class="tab-content active" id="fileTab">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">파일을 드래그하거나 클릭하여 선택</div>
+                <div class="upload-hint">지원 형식: .txt, .text, .md (최대 16MB)</div>
+                <input type="file" id="fileInput" accept=".txt,.text,.md">
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            
+            <button id="uploadBtn" disabled>워드클라우드 생성</button>
+        </div>
+        
+        <!-- URL 크롤링 섹션 -->
+        <div class="tab-content" id="urlTab">
+            <div class="url-input-area">
+                <div class="upload-icon">🌐</div>
+                <input type="text" id="urlInput" placeholder="https://example.com 또는 example.com" class="url-input">
+                <div class="upload-hint">웹사이트 URL을 입력하세요</div>
+            </div>
+            
+            <button id="crawlBtn">워드클라우드 생성</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>워드클라우드를 생성하는 중...</div>
+        </div>
+        
+        <div class="result" id="result">
+            <div class="result-message" id="resultMessage"></div>
+            <a href="#" id="downloadLink" class="download-btn" style="display: none;">이미지 다운로드</a>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const urlInput = document.getElementById('urlInput');
+        const crawlBtn = document.getElementById('crawlBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const resultMessage = document.getElementById('resultMessage');
+        const downloadLink = document.getElementById('downloadLink');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        let selectedFile = null;
+        
+        // 탭 전환 기능
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+                
+                // 모든 탭 버튼 비활성화
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // 선택된 탭 활성화
+                btn.classList.add('active');
+                document.getElementById(targetTab + 'Tab').classList.add('active');
+                
+                // 결과 초기화
+                result.classList.remove('show');
+            });
+        });
+        
+        // 파일 크기를 읽기 쉬운 형식으로 변환
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        // 파일 선택 처리
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            uploadBtn.disabled = false;
+        }
+        
+        // 업로드 영역 클릭
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 파일 입력 변경
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        // 드래그 앤 드롭 처리
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // 업로드 버튼 클릭
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            // UI 상태 변경
+            uploadBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            // FormData 생성
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                // 파일 업로드 및 워드클라우드 생성 요청
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // 로딩 숨기기
+                loading.classList.remove('show');
+                
+                if (response.ok && data.success) {
+                    // 성공 메시지 표시
+                    result.classList.add('show', 'success');
+                    resultMessage.textContent = data.message;
+                    downloadLink.href = data.download_url;
+                    downloadLink.style.display = 'inline-block';
+                    
+                    // 파일 정보 초기화
+                    selectedFile = null;
+                    fileInput.value = '';
+                    fileInfo.classList.remove('show');
+                    uploadBtn.disabled = true;
+                } else {
+                    // 오류 메시지 표시
+                    result.classList.add('show', 'error');
+                    resultMessage.innerHTML = `<span class="error-message">오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}</span>`;
+                    downloadLink.style.display = 'none';
+                    uploadBtn.disabled = false;
+                }
+            } catch (error) {
+                // 네트워크 오류 처리
+                loading.classList.remove('show');
+                result.classList.add('show', 'error');
+                resultMessage.innerHTML = `<span class="error-message">네트워크 오류: ${error.message}</span>`;
+                downloadLink.style.display = 'none';
+                uploadBtn.disabled = false;
+            }
+        });
+        
+        // URL 크롤링 버튼 클릭
+        crawlBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                result.classList.add('show', 'error');
+                resultMessage.innerHTML = '<span class="error-message">URL을 입력해주세요.</span>';
+                downloadLink.style.display = 'none';
+                return;
+            }
+            
+            // UI 상태 변경
+            crawlBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                // URL 크롤링 및 워드클라우드 생성 요청
+                const response = await fetch('/crawl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                // 로딩 숨기기
+                loading.classList.remove('show');
+                
+                if (response.ok && data.success) {
+                    // 성공 메시지 표시
+                    result.classList.add('show', 'success');
+                    resultMessage.textContent = data.message;
+                    downloadLink.href = data.download_url;
+                    downloadLink.style.display = 'inline-block';
+                } else {
+                    // 오류 메시지 표시
+                    result.classList.add('show', 'error');
+                    resultMessage.innerHTML = `<span class="error-message">오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}</span>`;
+                    downloadLink.style.display = 'none';
+                }
+            } catch (error) {
+                // 네트워크 오류 처리
+                loading.classList.remove('show');
+                result.classList.add('show', 'error');
+                resultMessage.innerHTML = `<span class="error-message">네트워크 오류: ${error.message}</span>`;
+                downloadLink.style.display = 'none';
+            } finally {
+                crawlBtn.disabled = false;
+            }
+        });
+        
+        // URL 입력 필드에서 Enter 키 처리
+        urlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                crawlBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
