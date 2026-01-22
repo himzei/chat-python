@@ -11,6 +11,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import re
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'  # 업로드된 파일 저장 폴더
@@ -23,6 +25,17 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
 # 한글 폰트 경로 설정 (Windows 기본 폰트)
 FONT_PATH = 'C:/Windows/Fonts/malgun.ttf'
+
+# 감정 분석 모델 로드 (앱 시작 시 한 번만 로드)
+print("감정 분석 모델을 로드하는 중...")
+try:
+    sentiment_tokenizer = AutoTokenizer.from_pretrained("beomi/kcbert-base")
+    sentiment_model = AutoModelForSequenceClassification.from_pretrained("beomi/kcbert-base", num_labels=2)
+    print("감정 분석 모델 로드 완료!")
+except Exception as e:
+    print(f"감정 분석 모델 로드 실패: {str(e)}")
+    sentiment_tokenizer = None
+    sentiment_model = None
 
 def crawl_website(url):
     """
@@ -80,6 +93,53 @@ def crawl_website(url):
         raise Exception(f'HTTP 오류 발생: {e.response.status_code}')
     except Exception as e:
         raise Exception(f'웹 크롤링 중 오류 발생: {str(e)}')
+
+def analyze_sentiment(text):
+    """
+    텍스트의 감정을 분석하는 함수
+    
+    Args:
+        text: 분석할 텍스트
+    
+    Returns:
+        dict: 감정 분석 결과 (polarity, positive_prob, negative_prob)
+    """
+    # 모델이 로드되지 않은 경우 None 반환
+    if sentiment_tokenizer is None or sentiment_model is None:
+        return None
+    
+    try:
+        # 텍스트가 너무 긴 경우 앞부분만 사용 (512 토큰 제한)
+        # 실제로는 문장 단위로 나누어 분석하는 것이 더 정확하지만, 
+        # 간단하게 앞부분만 사용
+        max_length = 500  # 토큰화 전 문자 수 제한
+        if len(text) > max_length:
+            text = text[:max_length]
+        
+        # 토큰화 및 모델 입력 준비
+        inputs = sentiment_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        
+        # 감정 분석 수행
+        with torch.no_grad():
+            outputs = sentiment_model(**inputs)
+            logits = outputs.logits
+            probs = torch.softmax(logits, dim=1)
+        
+        # 0: 부정, 1: 긍정
+        positive_prob = probs[0][1].item()  # 긍정 확률
+        negative_prob = probs[0][0].item()  # 부정 확률
+        polarity = (positive_prob - 0.5) * 2  # -1(부정) ~ 1(긍정)로 변환
+        
+        return {
+            'polarity': round(polarity, 3),
+            'positive_prob': round(positive_prob, 3),
+            'negative_prob': round(negative_prob, 3)
+        }
+    
+    except Exception as e:
+        # 감정 분석 실패 시 None 반환 (워드클라우드 생성은 계속 진행)
+        print(f"감정 분석 중 오류 발생: {str(e)}")
+        return None
 
 def create_wordcloud(text, width=800, height=400):
     """
@@ -168,6 +228,9 @@ def upload_file():
         # 워드클라우드 생성
         img_buffer = create_wordcloud(text_content)
         
+        # 감정 분석 수행
+        sentiment_result = analyze_sentiment(text_content)
+        
         # 고유한 파일명 생성
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
@@ -178,13 +241,20 @@ def upload_file():
         with open(output_path, 'wb') as f:
             f.write(img_buffer.read())
         
-        # 다운로드 링크 반환
-        return jsonify({
+        # 응답 데이터 준비
+        response_data = {
             'success': True,
             'message': '워드클라우드가 성공적으로 생성되었습니다.',
             'download_url': f'/download/{output_filename}',
             'filename': output_filename
-        })
+        }
+        
+        # 감정 분석 결과가 있으면 추가
+        if sentiment_result:
+            response_data['sentiment'] = sentiment_result
+        
+        # 다운로드 링크 반환
+        return jsonify(response_data)
     
     except Exception as e:
         return jsonify({'error': f'처리 중 오류가 발생했습니다: {str(e)}'}), 500
@@ -216,6 +286,9 @@ def crawl_url():
         # 워드클라우드 생성
         img_buffer = create_wordcloud(text_content)
         
+        # 감정 분석 수행
+        sentiment_result = analyze_sentiment(text_content)
+        
         # 고유한 파일명 생성
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
@@ -226,13 +299,20 @@ def crawl_url():
         with open(output_path, 'wb') as f:
             f.write(img_buffer.read())
         
-        # 다운로드 링크 반환
-        return jsonify({
+        # 응답 데이터 준비
+        response_data = {
             'success': True,
             'message': '워드클라우드가 성공적으로 생성되었습니다.',
             'download_url': f'/download/{output_filename}',
             'filename': output_filename
-        })
+        }
+        
+        # 감정 분석 결과가 있으면 추가
+        if sentiment_result:
+            response_data['sentiment'] = sentiment_result
+        
+        # 다운로드 링크 반환
+        return jsonify(response_data)
     
     except Exception as e:
         return jsonify({'error': f'처리 중 오류가 발생했습니다: {str(e)}'}), 500

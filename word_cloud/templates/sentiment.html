@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>감정 분석 서비스</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        /* 탭 스타일 */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        
+        .tab-btn:hover {
+            color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 텍스트 입력 영역 */
+        .text-input-area {
+            margin-bottom: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea::placeholder {
+            color: #999;
+        }
+        
+        /* 파일 업로드 영역 */
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .file-info.show {
+            display: block;
+        }
+        
+        .file-name {
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* 버튼 스타일 */
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* 로딩 스타일 */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 결과 표시 영역 */
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 15px;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .sentiment-label {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .sentiment-label.positive {
+            color: #4caf50;
+        }
+        
+        .sentiment-label.negative {
+            color: #f44336;
+        }
+        
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .polarity-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .polarity-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 15px;
+        }
+        
+        .polarity-fill.positive {
+            background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
+        }
+        
+        .polarity-fill.negative {
+            background: linear-gradient(90deg, #f44336 0%, #ff9800 100%);
+        }
+        
+        .polarity-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 3px;
+            height: 100%;
+            background: #333;
+        }
+        
+        .error-message {
+            color: #f44336;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            background: #ffebee;
+            border-radius: 10px;
+        }
+        
+        .text-preview {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9em;
+            color: #666;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .text-preview-label {
+            color: #999;
+            font-size: 0.8em;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>😊 감정 분석 서비스</h1>
+        <p class="subtitle">텍스트를 입력하거나 파일을 업로드하여 감정을 분석해보세요</p>
+        
+        <!-- 탭 메뉴 -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="text">✍️ 텍스트 입력</button>
+            <button class="tab-btn" data-tab="file">📁 파일 업로드</button>
+        </div>
+        
+        <!-- 텍스트 입력 섹션 -->
+        <div class="tab-content active" id="textTab">
+            <div class="text-input-area">
+                <textarea 
+                    id="textInput" 
+                    placeholder="분석할 텍스트를 입력하세요...&#10;&#10;예: 오늘 정말 기분이 좋아요!"
+                ></textarea>
+            </div>
+            <button id="analyzeBtn">감정 분석하기</button>
+        </div>
+        
+        <!-- 파일 업로드 섹션 -->
+        <div class="tab-content" id="fileTab">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">파일을 드래그하거나 클릭하여 선택</div>
+                <div class="upload-hint">지원 형식: .txt, .text, .md, .csv (최대 16MB)</div>
+                <input type="file" id="fileInput" accept=".txt,.text,.md,.csv">
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            
+            <button id="uploadBtn" disabled>감정 분석하기</button>
+        </div>
+        
+        <!-- 로딩 표시 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>감정을 분석하는 중...</div>
+        </div>
+        
+        <!-- 결과 표시 영역 -->
+        <div class="result" id="result">
+            <div class="result-header">
+                <div class="sentiment-label" id="sentimentLabel"></div>
+            </div>
+            
+            <div class="result-stats">
+                <div class="stat-item">
+                    <div class="stat-label">긍정 확률</div>
+                    <div class="stat-value" id="positiveProb">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">부정 확률</div>
+                    <div class="stat-value" id="negativeProb">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">극성 점수</div>
+                    <div class="stat-value" id="polarityScore">-</div>
+                </div>
+            </div>
+            
+            <div class="polarity-bar">
+                <div class="polarity-fill" id="polarityFill"></div>
+                <div class="polarity-marker"></div>
+            </div>
+            
+            <div class="text-preview" id="textPreview" style="display: none;">
+                <div class="text-preview-label">분석한 텍스트 미리보기</div>
+                <div id="textPreviewContent"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // DOM 요소 가져오기
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const textInput = document.getElementById('textInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const sentimentLabel = document.getElementById('sentimentLabel');
+        const positiveProb = document.getElementById('positiveProb');
+        const negativeProb = document.getElementById('negativeProb');
+        const polarityScore = document.getElementById('polarityScore');
+        const polarityFill = document.getElementById('polarityFill');
+        const textPreview = document.getElementById('textPreview');
+        const textPreviewContent = document.getElementById('textPreviewContent');
+        
+        let selectedFile = null;
+        
+        // 탭 전환 기능
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+                
+                // 모든 탭 비활성화
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // 선택된 탭 활성화
+                btn.classList.add('active');
+                document.getElementById(targetTab + 'Tab').classList.add('active');
+                
+                // 결과 초기화
+                result.classList.remove('show');
+            });
+        });
+        
+        // 파일 크기를 읽기 쉬운 형식으로 변환
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+        
+        // 파일 선택 처리
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            uploadBtn.disabled = false;
+        }
+        
+        // 업로드 영역 클릭
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 파일 입력 변경
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+        
+        // 드래그 앤 드롭 처리
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // 결과 표시 함수
+        function displayResult(data, previewText = null) {
+            const sentiment = data.result.sentiment;
+            const isPositive = sentiment === '긍정';
+            
+            // 감정 레이블 설정
+            sentimentLabel.textContent = `감정: ${sentiment}`;
+            sentimentLabel.className = `sentiment-label ${isPositive ? 'positive' : 'negative'}`;
+            
+            // 통계 표시
+            positiveProb.textContent = (data.result.positive_prob * 100).toFixed(1) + '%';
+            negativeProb.textContent = (data.result.negative_prob * 100).toFixed(1) + '%';
+            polarityScore.textContent = data.result.polarity.toFixed(3);
+            
+            // 극성 바 표시 (-1 ~ 1을 0% ~ 100%로 변환)
+            const polarityPercent = ((data.result.polarity + 1) / 2) * 100;
+            polarityFill.style.width = polarityPercent + '%';
+            polarityFill.className = `polarity-fill ${isPositive ? 'positive' : 'negative'}`;
+            
+            // 텍스트 미리보기 표시 (파일 업로드인 경우)
+            if (previewText) {
+                const truncatedText = previewText.length > 500 
+                    ? previewText.substring(0, 500) + '...' 
+                    : previewText;
+                textPreviewContent.textContent = truncatedText;
+                textPreview.style.display = 'block';
+            } else {
+                textPreview.style.display = 'none';
+            }
+            
+            // 결과 영역 표시
+            result.classList.add('show');
+        }
+        
+        // 에러 표시 함수
+        function displayError(errorMessage) {
+            result.classList.add('show');
+            sentimentLabel.textContent = '오류 발생';
+            sentimentLabel.className = 'sentiment-label';
+            positiveProb.textContent = '-';
+            negativeProb.textContent = '-';
+            polarityScore.textContent = '-';
+            polarityFill.style.width = '0%';
+            textPreview.style.display = 'none';
+            
+            // 에러 메시지를 통계 영역에 표시
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = errorMessage;
+            
+            // 기존 에러 메시지 제거
+            const existingError = result.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            result.appendChild(errorDiv);
+        }
+        
+        // 텍스트 분석 버튼 클릭
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                displayError('텍스트를 입력해주세요.');
+                return;
+            }
+            
+            // UI 상태 변경
+            analyzeBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                // API 호출
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                // 로딩 숨기기
+                loading.classList.remove('show');
+                
+                if (response.ok && data.success) {
+                    displayResult(data);
+                } else {
+                    displayError(data.error || '알 수 없는 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                displayError(`네트워크 오류: ${error.message}`);
+            } finally {
+                analyzeBtn.disabled = false;
+            }
+        });
+        
+        // 파일 업로드 버튼 클릭
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            // UI 상태 변경
+            uploadBtn.disabled = true;
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            // FormData 생성
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                // 파일 업로드 및 감정 분석 요청
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // 로딩 숨기기
+                loading.classList.remove('show');
+                
+                if (response.ok && data.success) {
+                    // 파일 내용 미리보기를 위해 파일 읽기
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        displayResult(data, e.target.result);
+                    };
+                    reader.readAsText(selectedFile);
+                } else {
+                    displayError(data.error || '알 수 없는 오류가 발생했습니다.');
+                    uploadBtn.disabled = false;
+                }
+            } catch (error) {
+                loading.classList.remove('show');
+                displayError(`네트워크 오류: ${error.message}`);
+                uploadBtn.disabled = false;
+            }
+        });
+        
+        // 텍스트 입력 필드에서 Enter 키 처리 (Ctrl+Enter로 분석)
+        textInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                analyzeBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
