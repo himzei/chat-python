@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>검색결과</h1>
+    <p>검색어 : {{ keyword }}</p>
+
+    <table>
+
+        <tr>
+            <th>회사이름</th>
+            <th>공고제목</th>
+            <th>회사위치</th>
+            <th>자세히보기</th>
+        </tr>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job["회사이름"] }}</td>
+            <td>{{ job["공고제목"] }}</td>
+            <td>{{ job["회사위치"] }}</td>       
+            <td>{{ job["자세히보기"] }}</td>
+        </tr>
+        {% endfor %}
+
+    </table>
+</body>
+</html>
