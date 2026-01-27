@@ -1,31 +1,378 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>검색결과 - Incruit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+            background-color: #f5f5f5;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        /* 상단 헤더 */
+        .top-header {
+            height: 8px;
+            background: linear-gradient(90deg, 
+                #ff6b35 0%, 
+                #4ecdc4 25%, 
+                #ffe66d 50%, 
+                #ff6b9d 75%, 
+                #ff6b35 100%);
+            width: 100%;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* 검색 결과 헤더 */
+        .search-header {
+            background-color: #ffffff;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .search-header-left {
+            flex: 1;
+        }
+
+        .search-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+
+        .search-keyword {
+            font-size: 16px;
+            color: #666666;
+        }
+
+        .keyword-highlight {
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        .download-button {
+            padding: 12px 24px;
+            background-color: #ff6b35;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .download-button:hover {
+            background-color: #ff8c5a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        /* 결과 카운트 */
+        .result-count {
+            margin-bottom: 20px;
+            color: #666666;
+            font-size: 14px;
+        }
+
+        /* 카드 그리드 */
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* 개별 채용 카드 */
+        .job-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .job-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 회사명 영역 */
+        .company-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .company-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 16px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .company-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #000000;
+            flex: 1;
+        }
+
+        /* 채용 공고 제목 */
+        .job-title {
+            font-size: 17px;
+            font-weight: 500;
+            color: #000000;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            flex: 1;
+        }
+
+        .company-name-in-title {
+            color: #666666;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        /* 위치 정보 */
+        .job-location {
+            display: flex;
+            align-items: center;
+            color: #666666;
+            font-size: 14px;
+            margin-bottom: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .location-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            opacity: 0.6;
+        }
+
+        /* 카드 하단 영역 */
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 12px;
+        }
+
+        .view-details {
+            color: #ff6b35;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s ease;
+        }
+
+        .view-details:hover {
+            color: #ff8c5a;
+        }
+
+        .view-details::after {
+            content: '→';
+            margin-left: 4px;
+            transition: transform 0.3s ease;
+        }
+
+        .view-details:hover::after {
+            transform: translateX(4px);
+        }
+
+        /* 빈 결과 메시지 */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-results-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .no-results-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333333;
+            margin-bottom: 10px;
+        }
+
+        .no-results-text {
+            font-size: 16px;
+            color: #666666;
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .jobs-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .search-title {
+                font-size: 20px;
+            }
+
+            .container {
+                padding: 20px 15px;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .jobs-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1025px) {
+            .jobs-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+    <script>
+        // 카드 클릭 시 새 창에서 링크 열기
+        document.addEventListener('DOMContentLoaded', function() {
+            const jobCards = document.querySelectorAll('.job-card');
+            jobCards.forEach(function(card) {
+                card.addEventListener('click', function(e) {
+                    // 자세히보기 링크를 클릭한 경우는 기본 동작 유지
+                    if (e.target.closest('.view-details')) {
+                        return;
+                    }
+                    const link = card.getAttribute('data-link');
+                    if (link) {
+                        window.open(link, '_blank');
+                    }
+                });
+            });
+        });
+    </script>
 </head>
 <body>
-    <h1>검색결과</h1>
-    <p>검색어 : {{ keyword }}</p>
+    <!-- 상단 컬러풀한 헤더 -->
+    <div class="top-header"></div>
 
-    <table>
+    <!-- 메인 컨테이너 -->
+    <div class="container">
+        <!-- 검색 결과 헤더 -->
+        <div class="search-header">
+            <div class="search-header-left">
+                <h1 class="search-title">검색결과</h1>
+                <p class="search-keyword">
+                    검색어: <span class="keyword-highlight">{{ keyword }}</span>
+                </p>
+            </div>
+            <a href="/download?keyword={{ keyword }}" class="download-button">
+                CSV 다운로드
+            </a>
+        </div>
 
-        <tr>
-            <th>회사이름</th>
-            <th>공고제목</th>
-            <th>회사위치</th>
-            <th>자세히보기</th>
-        </tr>
-        {% for job in jobs %}
-        <tr>
-            <td>{{ job["회사이름"] }}</td>
-            <td>{{ job["공고제목"] }}</td>
-            <td>{{ job["회사위치"] }}</td>       
-            <td>{{ job["자세히보기"] }}</td>
-        </tr>
-        {% endfor %}
+        <!-- 결과 카운트 -->
+        {% if jobs %}
+        <div class="result-count">
+            총 <strong>{{ jobs|length }}</strong>개의 채용공고를 찾았습니다.
+        </div>
+        {% endif %}
 
-    </table>
+        <!-- 채용공고 카드 그리드 -->
+        {% if jobs %}
+        <div class="jobs-grid">
+            {% for job in jobs %}
+            <div class="job-card" data-link="{{ job.get('자세히보기', '') }}">
+                <!-- 회사명 영역 -->
+                <div class="company-header">
+                    <div class="company-logo">
+                        {{ job.get('회사이름', '?')[0] if job.get('회사이름') else '?' }}
+                    </div>
+                    <div class="company-name">{{ job.get('회사이름', '') }}</div>
+                </div>
+
+                <!-- 채용 공고 제목 -->
+                <div class="job-title">
+                    <div class="company-name-in-title">({{ job.get('회사이름', '') }})</div>
+                    {{ job.get('공고제목', '') }}
+                </div>
+
+                <!-- 위치 정보 -->
+                {% if job.get('회사위치') %}
+                <div class="job-location">
+                    <svg class="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {{ job.get('회사위치', '') }}
+                </div>
+                {% endif %}
+
+                <!-- 카드 하단 -->
+                <div class="card-footer">
+                    <a href="{{ job.get('자세히보기', '') }}" target="_blank" class="view-details" onclick="event.stopPropagation();">
+                        자세히보기
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- 빈 결과 메시지 -->
+        <div class="no-results">
+            <div class="no-results-icon">🔍</div>
+            <div class="no-results-title">검색 결과가 없습니다</div>
+            <div class="no-results-text">
+                다른 검색어로 시도해보세요.
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </body>
 </html>
